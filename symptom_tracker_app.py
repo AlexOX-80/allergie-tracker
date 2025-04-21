@@ -5,6 +5,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
+from datetime import datetime
 import requests
 import os
 from meteostat import Daily, Stations
@@ -18,14 +19,23 @@ POLLENSTIFTUNG_API_URL = "https://www.pollenstiftung.de/services/forecast"
 DWD_POLLEN_BASE_URL   = "https://opendata.dwd.de/climate_environment/health/pollen_stations"
 
 # -- Funktionen --
+
+
 def get_weather(dt, lat, lon):
-    """Tagesmittelwerte Temperatur, Luftfeuchte, Niederschlag via Meteostat."""
-    stations = Stations().nearby(lat, lon)
-    station = stations.fetch(1)
+    # Sicherstellen, dass dt ein datetime.date ist
+    if isinstance(dt, str):
+        dt = datetime.strptime(dt, "%Y-%m-%d").date()
+    elif isinstance(dt, pd.Timestamp):
+        dt = dt.date()
+
+    station = Stations().nearby(lat, lon).fetch(1)
+    if station.empty:
+        return None
+
+    station = station.index[0]
     data = Daily(station, dt, dt).fetch()
-    if not data.empty:
-        return data[['tavg', 'rhum', 'prcp']].iloc[0].to_dict()
-    return {'tavg': None, 'rhum': None, 'prcp': None}
+    return data
+
 
 
 def get_pollenstiftung(lat, lon):
